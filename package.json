@@ -16,6 +16,7 @@
     "@types/bcryptjs": "^2.4.2",
     "@types/body-parser": "^1.19.2",
     "@types/express": "^4.17.13",
+    "@types/gravatar": "^1.8.3",
     "@types/jsonwebtoken": "^8.5.8",
     "@types/mongoose": "^5.11.97",
     "@types/node": "^17.0.32",
@@ -31,6 +32,7 @@
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.20.0",
+    "gravatar": "^1.8.2",
     "jsonwebtoken": "^8.5.1",
     "mongodb": "^4.6.0",
     "mongoose": "^6.3.3",
