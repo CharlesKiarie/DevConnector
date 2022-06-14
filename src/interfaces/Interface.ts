@@ -27,6 +27,8 @@ export interface IErrors {
     degree?: string;
     fieldofstudy?: string;
     from?: string;
+    posts?: string;
+    text?: string;
 }
 
 export interface IDataInputs extends IUser {
@@ -36,6 +38,7 @@ export interface IDataInputs extends IUser {
     facebook: string;
     linkedin: string;
     instagram: string;
+    text: string;
 }
 
 export interface IProfile extends mongoose.Document {
@@ -53,6 +56,30 @@ export interface IProfile extends mongoose.Document {
     education?: Array<Education>;
     social: Social;
     date?: Date;
+}
+
+export interface IPost extends mongoose.Document {
+    id?: ObjectId;
+    user: ObjectId;
+    text: string;
+    name: string;
+    avatar: string;
+    likes: Array<User>;
+    comments: Array<Comment>;
+    date: Date;
+}
+
+export interface Comment {
+    id?: ObjectId;
+    user: ObjectId;
+    text: string;
+    name: string;
+    avatar: string;
+    date: Date;
+}
+
+export interface User {
+    user: ObjectId;
 }
 
 export interface Experience {
