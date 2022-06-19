@@ -142,14 +142,14 @@ router.post('/', passport.authenticate('jwt', {session: false}), async (req: Req
                 {$set: profileFields},
                 {new: true}
             );
-            res.status(200).json(profile);
+            return res.status(200).json(profile);
         } else {
             // Create
             // Check if handle exists
             const profile = await Profile.findOne({ handle: profileFields.handle});
             if(profile) {
                 errors.handle = "That handle already exists";
-                res.status(400).json(errors);
+                return res.status(400).json(errors);
             }
 
             //Save profile
@@ -174,7 +174,7 @@ router.post('/experience', passport.authenticate('jwt', {session: false}), async
         }
 
         const profile = await Profile.findOne({user: x.user._id});
-        if(profile) {
+        if(profile && profile.experience) {
             const newExp: Experience = {
                 title: req.body.title,
                 company: req.body.company,
@@ -185,7 +185,7 @@ router.post('/experience', passport.authenticate('jwt', {session: false}), async
                 description: req.body.description,
             }
 
-            profile.experience?.unshift(newExp);
+            profile.experience.unshift(newExp);
             const newProfile = await profile.save();
             if(newProfile) {
                 res.status(200).json(newProfile);
@@ -206,14 +206,18 @@ router.delete('/experience/:exp_id', passport.authenticate('jwt', {session: fals
         const errors: IErrors = {};
 
         const profile = await Profile.findOne({user: x.user._id});
+        if(!profile) return res.status(404).json({profile: "Profile of ID does not exist!"});
+
         if(profile && profile.experience) {
+            let exp_item = profile.experience.filter(item => { return item.id!.toString() === exp_id.toString()});
+            if(exp_item.length === 0) {
+                return res.status(404).json({profile: "Experience entry of ID does not exist!"});
+                // console.log(profile.experience);
+            }
+            
+
             // Get remove index
-            const removeIndex = profile.experience.map((item) => {
-                console.log("DELETE + " + exp_id);
-            console.log("MATCH + " + item.id);
-               return item.id
-            }).indexOf(exp_id);
-            console.log("Remove index " + removeIndex)
+            const removeIndex = profile.experience.map(item => item.id!.toString()).indexOf(exp_id.toString());
 
             // Splice out Array
             profile.experience.splice(removeIndex, 1);
@@ -241,7 +245,7 @@ router.post('/education', passport.authenticate('jwt', {session: false}), async 
         }
 
         const profile = await Profile.findOne({user: x.user._id});
-        if(profile) {
+        if(profile && profile.education) {
             const newEdu: Education = {
                 school: req.body.school,
                 degree: req.body.degree,
@@ -252,7 +256,7 @@ router.post('/education', passport.authenticate('jwt', {session: false}), async 
                 description: req.body.description,
             }
 
-            profile.education?.unshift(newEdu);
+            profile.education.unshift(newEdu);
             const newProfile = await profile.save();
             if(newProfile) {
                 res.status(200).json(newProfile);
@@ -269,13 +273,21 @@ router.post('/education', passport.authenticate('jwt', {session: false}), async 
 router.delete('/education/:edu_id', passport.authenticate('jwt', {session: false}), async (req: Request, res: Response) => {
     try {
         const x = req as AuthenticatedRequest;
-        const edu_id = new mongoose.Schema.Types.ObjectId(req.params.edu_id);
+        const edu_id = new mongoose.Types.ObjectId(req.params.edu_id);
         const errors: IErrors = {};
 
         const profile = await Profile.findOne({user: x.user._id});
+        if(!profile) return res.status(404).json({profile: "Profile of ID does not exist!"});
+
         if(profile && profile.education) {
+            let edu_item = profile.education.filter(item => { return item.id!.toString() === edu_id.toString()});
+            if(edu_item.length === 0) {
+                return res.status(404).json({profile: "Experience entry of ID does not exist!"});
+                // console.log(profile.experience);
+            }
+
             // Get remove index
-            const removeIndex = profile.education.map(item => item.id).indexOf(edu_id);
+            const removeIndex = profile.education.map(item => item.id!.toString()).indexOf(edu_id.toString());
 
             // Splice out Array
             profile.education.splice(removeIndex, 1);

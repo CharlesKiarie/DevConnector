@@ -5,10 +5,12 @@ import { IUser, IErrors, IPost, Comment } from "../../interfaces/Interface";
 import Post from "../../models/Post";
 import Profile from "../../models/Profile";
 import validatePostInput from "../../validation/validatePostInput";
+import isEmpty from "../../validation/is-empty";
 
 const router: Router = express.Router();
 type AuthenticatedRequest = Request & {user: IUser}
 
+// TODO: DEBUG ALL ROUTES
 
 // @route   GET api/posts/test
 // @desc Test posts route
@@ -27,7 +29,7 @@ router.get('/', async (req: Request, res: Response) => {
         const errors: IErrors = {};
 
         const posts = await Post.find().sort({ date: -1 });
-        if(!posts) {
+        if(isEmpty(posts)) {
             errors.posts = "No posts were found";
             return res.status(404).json(errors);
         }
@@ -90,21 +92,6 @@ router.post('/', passport.authenticate('jwt', {session: false}), async (req: Req
 router.delete('/:id', passport.authenticate('jwt', {session: false}), async (req: Request, res: Response) => {
     const x = req as AuthenticatedRequest;
 
-    // Profile.findOne({user: x.user.id})
-    // .then(profile => {
-    //     Post.findById(req.params.id)
-    //     .then(post => {
-    //         // Check for post owner
-    //         if(post.user.toString() !== x.user.id) {
-    //             return res.status(401).json({notauthorized: "User not authorized"});
-    //         }
-
-    //         // Delete
-    //         post.remove().then(() => res.status(200).json({Success: true}));
-    //     })
-    //     .catch(err => res.status(404).json({postNotFound: "No post found"}));
-    // })
-
     try {
         const x = req as AuthenticatedRequest;
 
@@ -115,9 +102,8 @@ router.delete('/:id', passport.authenticate('jwt', {session: false}), async (req
         if(!post) return res.status(404).json({posts: "Post of ID does not exist!"});
 
         // Check for post owner
-        if(post.user !== x.user.id) return res.status(401).json({notauthorized: "User not authorized"});
-
-        // post.remove().then(() => res.status(200).json({Success: true}));
+        if(post.user.toString() !== x.user.id!.toString()) return res.status(401).json({notauthorized: "User not authorized"});
+        
         const removedPost = await post.remove();
         if(removedPost) {
             res.status(200).json({Success: true});
@@ -132,7 +118,7 @@ router.delete('/:id', passport.authenticate('jwt', {session: false}), async (req
 // @route   POST api/posts/like/:id
 // @desc    Like a post
 // @access  Private
-router.delete('/like/:id', passport.authenticate('jwt', {session: false}), async (req: Request, res: Response) => {
+router.post('/like/:id', passport.authenticate('jwt', {session: false}), async (req: Request, res: Response) => {
     try {
         const x = req as AuthenticatedRequest;
         const profile = await Profile.findOne({user: x.user._id});
@@ -144,7 +130,7 @@ router.delete('/like/:id', passport.authenticate('jwt', {session: false}), async
             return res.status(404).json({posts: "Post of ID does not exist!"});
         }
         // Check if user already liked the post
-        if(post.likes.filter(like => like.user === x.user._id).length > 0) {
+        if(post.likes.filter(like => like.user.toString() === x.user._id!.toString()).length > 0) {
             return res.status(400).json({posts: "User already liked the post"});
         }
 
@@ -164,7 +150,7 @@ router.delete('/like/:id', passport.authenticate('jwt', {session: false}), async
 // @route   DELETE api/posts/unlike/:id
 // @desc    Un-like a post
 // @access  Private
-router.delete('/like/:id', passport.authenticate('jwt', {session: false}), async (req: Request, res: Response) => {
+router.post('/unlike/:id', passport.authenticate('jwt', {session: false}), async (req: Request, res: Response) => {
     try {
         const x = req as AuthenticatedRequest;
         const profile = await Profile.findOne({user: x.user._id});
@@ -176,12 +162,12 @@ router.delete('/like/:id', passport.authenticate('jwt', {session: false}), async
             return res.status(404).json({posts: "Post of ID does not exist!"});
         }
         // Check if user already liked the post
-        if(post.likes.filter(like => like.user === x.user._id).length === 0) {
+        if(post.likes.filter(like => like.user.toString() === x.user._id!.toString()).length === 0) {
             return res.status(400).json({posts: "You have not yet liked this post"});
         }
 
         // Remove user from likes array
-        const removeIndex = post.likes.map(item => item.user).indexOf(x.user._id);
+        const removeIndex = post.likes.map(item => item.user.toString()).indexOf(x.user._id!.toString());
         post.likes.splice(removeIndex, 1);
         const newLike = await post.save();
         if(newLike) {
@@ -210,7 +196,7 @@ router.post('/comment/:id', passport.authenticate('jwt', {session: false}), asyn
             user: x.user._id,
         });
 
-        const post = await Post.findById(req.body.params)
+        const post = await Post.findById(req.params.id);
         if(!post) {
             return res.status(404).json({posts: "Post of ID does not exist!"});
         }
@@ -231,18 +217,17 @@ router.post('/comment/:id', passport.authenticate('jwt', {session: false}), asyn
 router.delete('/comment/:id/:comment_id', passport.authenticate('jwt', {session: false}), async (req: Request, res: Response) => {
     try {
         const x = req as AuthenticatedRequest;
-        const comment_id = new mongoose.Schema.Types.ObjectId(req.params.comment_id);
+        const comment_id = new mongoose.Types.ObjectId(req.params.comment_id);
 
-        const post = await Post.findById(comment_id);
-        if(!post) {
-            return res.status(404).json({posts: "Post of ID does not exist!"});
-        }
-        if(post.comments.filter(comment => comment.id === comment_id).length === 0) {
+        const post = await Post.findById(req.params.id);
+        if(!post) return res.status(404).json({posts: "Post of ID does not exist!"});
+
+        if(post.comments.filter(comment => comment.id!.toString() === comment_id.toString()).length === 0) {
             return res.status(404).json({posts: "Comment of ID does not exist!"});
         }
 
         // Remove comment
-        const removeIndex = post.comments.map(item => item.id).indexOf(comment_id);
+        const removeIndex = post.comments.map(item => item.id!.toString()).indexOf(comment_id.toString());
         post.comments.splice(removeIndex, 1);
         const newPost = await post.save();
         if(newPost) {
